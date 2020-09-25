@@ -1163,7 +1163,7 @@ def run_games(worker_info, password, remote, run, task_id, pgn_file):
 
     # Clean up old engines (keeping the num_bkps most recent).
     engines = glob.glob(os.path.join(testing_dir, "stockfish_*" + EXE_SUFFIX))
-    num_bkps = 50
+    num_bkps = 3
     if len(engines) > num_bkps:
         engines.sort(key=os.path.getmtime)
         for old_engine in engines[:-num_bkps]:
