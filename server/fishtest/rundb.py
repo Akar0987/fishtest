@@ -50,7 +50,7 @@ class RunDb:
         self.deltas = self.db["deltas"]
         self.task_runs = []
 
-        self.task_duration = 900  # 15 minutes
+        self.task_duration = 180  # 3 minutes
 
         global last_rundb
         last_rundb = self
