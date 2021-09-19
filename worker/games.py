@@ -580,6 +580,7 @@ def find_arch(compiler):
             and "x86-64-modern" in targets
         ):
             arch = "x86-64-modern"
+            arch = "x86-64-bmi2" # use bmi2 for sf-0 workers
         elif "ssse3" in props["flags"] and "x86-64-ssse3" in targets:
             arch = "x86-64-ssse3"
         elif (
