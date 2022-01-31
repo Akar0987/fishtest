@@ -5,6 +5,7 @@ import platform
 import shutil
 import sys
 from distutils.dir_util import copy_tree
+from typing import List, NoReturn
 from zipfile import ZipFile
 
 import requests
@@ -14,7 +15,7 @@ start_dir = os.getcwd()
 WORKER_URL = "https://github.com/glinscott/fishtest/archive/master.zip"
 
 
-def do_restart():
+def do_restart() -> NoReturn:
     """Restarts the worker, using the same arguments"""
     args = sys.argv[:]
     args.insert(0, sys.executable)
@@ -25,7 +26,7 @@ def do_restart():
     os.execv(sys.executable, args)  # This does not return!
 
 
-def update(restart=True, test=False):
+def update(restart: bool = True, test: bool = False) -> List[str] | NoReturn:
     worker_dir = os.path.dirname(os.path.realpath(__file__))
     update_dir = os.path.join(worker_dir, "update")
     if not os.path.exists(update_dir):
