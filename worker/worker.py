@@ -14,9 +14,10 @@ import sys
 import threading
 import time
 import traceback
+from typing import Any, Dict, Mapping, NoReturn, Sequence, Tuple
 import uuid
 import zlib
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from contextlib import ExitStack
 from functools import partial
@@ -110,7 +111,7 @@ In that case the corresponding value is an error message.
 """
 
 
-def _bool(x):
+def _bool(x: str) -> bool:
     x = x.strip().lower()
     if x in {"true", "1"}:
         return True
@@ -122,14 +123,14 @@ def _bool(x):
 _bool.__name__ = "bool"
 
 
-def safe_sleep(f):
+def safe_sleep(f: int) -> None:
     try:
         time.sleep(f)
     except:
         print("\nSleep interrupted...")
 
 
-def verify_credentials(remote, username, password, cached):
+def verify_credentials(remote: str, username: str, password: str, cached: bool) -> bool:
     # Returns:
     # True  : username/password are ok
     # False : username/password are not ok
@@ -156,7 +157,7 @@ def verify_credentials(remote, username, password, cached):
     return False  # empty username or password
 
 
-def get_credentials(config, options, args):
+def get_credentials(config: ConfigParser, options: Namespace, args: Sequence[str]):
 
     remote = "{}://{}:{}".format(options.protocol, options.host, options.port)
     print("Worker version {} connecting to {}".format(WORKER_VERSION, remote))
@@ -191,7 +192,7 @@ def get_credentials(config, options, args):
     return username, password
 
 
-def validate(config, schema):
+def validate(config: ConfigParser, schema: Sequence[Any]) -> None:
     for v in schema:
         if not config.has_section(v[0]):
             config.add_section(v[0])
@@ -232,7 +233,7 @@ def validate(config, schema):
                 config.remove_option(section, option)
 
 
-def setup_parameters(worker_dir):
+def setup_parameters(worker_dir: str) -> Namespace | None:
 
     # Step 1: read the config file if it exists.
     config = ConfigParser()
@@ -397,7 +398,7 @@ def setup_parameters(worker_dir):
         help="do not validate username/password with server",
     )
 
-    def my_error(e):
+    def my_error(e: Any) -> NoReturn:
         raise Exception(e)
 
     parser.error = my_error
@@ -505,12 +506,12 @@ def setup_parameters(worker_dir):
     return options
 
 
-def on_sigint(current_state, signal, frame):
+def on_sigint(current_state: Mapping[str, Any], signal: Any, frame: Any) -> NoReturn:
     current_state["alive"] = False
     raise FatalException("Terminated by signal {}".format(str_signal(signal)))
 
 
-def get_rate():
+def get_rate() -> Tuple[Dict[str, int], bool]:
     try:
         rate = requests.get(
             "https://api.github.com/rate_limit", timeout=HTTP_TIMEOUT
@@ -524,7 +525,7 @@ def get_rate():
     return rate, remaining < math.sqrt(rate["limit"])
 
 
-def gcc_version():
+def gcc_version() -> Tuple[str, str, str, str] | None:
     """Parse the output of g++ -E -dM -"""
     try:
         with subprocess.Popen(
@@ -572,7 +573,7 @@ def gcc_version():
     return (compiler, major, minor, patchlevel)
 
 
-def clang_version():
+def clang_version() -> Tuple[str, str, str, str] | None:
     """Parse the output of clang++ -E -dM -"""
     try:
         with subprocess.Popen(
@@ -610,7 +611,7 @@ def clang_version():
     return (compiler, major, minor, patchlevel)
 
 
-def detect_compilers():
+def detect_compilers() -> Dict[str, str]:
     ret = {}
     gcc_version_ = gcc_version()
     if gcc_version_ is not None:
@@ -621,7 +622,7 @@ def detect_compilers():
     return ret
 
 
-def get_exception(files):
+def get_exception(files: str) -> str:
     i = 0
     exc_type, exc_obj, tb = sys.exc_info()
     filename, lineno, name, line = traceback.extract_tb(tb)[i]
@@ -636,7 +637,7 @@ def get_exception(files):
     return message
 
 
-def heartbeat(worker_info, password, remote, current_state):
+def heartbeat(worker_info: Mapping[str, Any], password: str, remote: str, current_state: DMappingict[str, Any]) -> None:
     print("Start heartbeat")
     payload = {
         "password": password,
@@ -667,7 +668,7 @@ def heartbeat(worker_info, password, remote, current_state):
         print("Heartbeat stopped")
 
 
-def read_int(file):
+def read_int(file: str) -> int | None:
     try:
         with open(file, "r") as f:
             return int(f.read())
@@ -675,7 +676,7 @@ def read_int(file):
         return None
 
 
-def write_int(file, n):
+def write_int(file: str, n: int) -> bool:
     try:
         with open(file, "w") as f:
             f.write("{}\n".format(n))
@@ -684,13 +685,13 @@ def write_int(file, n):
         return False
 
 
-def create_lock_file(lock_file):
+def create_lock_file(lock_file: str) -> None:
     print("Creating lock file {}".format(lock_file))
     atexit.register(delete_lock_file, lock_file)
     return write_int(lock_file, os.getpid())
 
 
-def delete_lock_file(lock_file):
+def delete_lock_file(lock_file: str) -> None:
     pid = read_int(lock_file)
     if pid is None or pid == os.getpid():
         print("Deleting lock file {}".format(lock_file))
@@ -700,7 +701,7 @@ def delete_lock_file(lock_file):
             print("Unable to delete lock file")
 
 
-def pid_valid(pid, name):
+def pid_valid(pid: int, name: str) -> bool:
     with ExitStack() as stack:
         if IS_WINDOWS:
             cmdlet = (
@@ -737,7 +738,7 @@ def pid_valid(pid, name):
     return False
 
 
-def locked_by_others(lock_file, require_valid=True):
+def locked_by_others(lock_file: str, require_valid: bool = True) -> bool:
     # At the start of the worker we tolerate an
     # invalid or non existing lock file since we
     # intend to replace it with one of our own.
@@ -761,7 +762,7 @@ def locked_by_others(lock_file, require_valid=True):
     return False
 
 
-def utcoffset():
+def utcoffset() -> str:
     dst = time.localtime().tm_isdst == 1 and time.daylight != 0
     utcoffset = -time.altzone if dst else -time.timezone
     abs_utcoffset_min = abs(utcoffset // 60)
@@ -769,7 +770,7 @@ def utcoffset():
     return "{}{:02d}:{:02d}".format("+" if utcoffset >= 0 else "-", hh, mm)
 
 
-def fetch_and_handle_task(worker_info, password, remote, lock_file, current_state):
+def fetch_and_handle_task(worker_info: Mapping[str, Any], password: str, remote: str, lock_file: str, current_state: Mapping[str, Any]) -> bool:
     # This function should normally not raise exceptions.
     # Unusual conditions are handled by returning False.
     # If an immediate exit is necessary then one can set
@@ -917,7 +918,7 @@ def fetch_and_handle_task(worker_info, password, remote, lock_file, current_stat
     return success
 
 
-def worker():
+def worker() -> int:
     if os.path.basename(__file__) != "worker.py":
         print("The script must be named 'worker.py'!")
         return 1
